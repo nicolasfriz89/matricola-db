@@ -4,8 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Controllo Matricola</title>
-<!-- ZXing barcode scanner -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/zxing-js/0.20.0/zxing.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;500;700&display=swap');
   :root {
@@ -19,21 +18,17 @@
     min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 32px 16px; }
   .header { text-align: center; margin-bottom: 32px; }
   .header h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 4px; }
-  .header p { color: var(--muted); font-size: 0.88rem; }
+  .header p { color: var(--muted); font-size: .88rem; }
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
     padding: 28px; width: 100%; max-width: 560px; }
-
-  /* DB BAR */
   .db-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 24px;
     padding-bottom: 24px; border-bottom: 1px solid var(--border); }
   .db-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex-shrink: 0; transition: background .3s; }
   .db-dot.loading { background: var(--accent); animation: pulse 1s infinite; }
-  .db-dot.ok      { background: var(--green); }
-  .db-dot.error   { background: var(--red); }
+  .db-dot.ok { background: var(--green); } .db-dot.error { background: var(--red); }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
   .db-text { font-size: .82rem; font-family: 'IBM Plex Mono', monospace; color: var(--muted); flex: 1; }
-  .db-text.ok    { color: var(--green); }
-  .db-text.error { color: var(--red); }
+  .db-text.ok { color: var(--green); } .db-text.error { color: var(--red); }
   .btn-reload { background: transparent; border: 1px solid var(--border); border-radius: 6px;
     color: var(--muted); font-size: .8rem; padding: 5px 10px; cursor: pointer;
     font-family: 'IBM Plex Sans', sans-serif; transition: border-color .15s, color .15s; }
@@ -41,17 +36,12 @@
   .progress-bar { height: 3px; background: var(--border); border-radius: 99px; margin-top: -16px;
     margin-bottom: 20px; overflow: hidden; display: none; }
   .progress-fill { height: 100%; width: 0%; background: var(--accent); border-radius: 99px; transition: width .3s; }
-
-  /* TABS */
   .tabs { display: flex; gap: 8px; margin-bottom: 24px; }
   .tab { flex: 1; padding: 10px; background: var(--bg); border: 1px solid var(--border);
     border-radius: 8px; color: var(--muted); font-family: 'IBM Plex Sans', sans-serif;
-    font-size: .88rem; font-weight: 600; cursor: pointer; text-align: center; transition: all .15s; }
+    font-size: .85rem; font-weight: 600; cursor: pointer; text-align: center; transition: all .15s; }
   .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-
-  /* FIELDS */
-  .panel { display: none; }
-  .panel.active { display: block; }
+  .panel { display: none; } .panel.active { display: block; }
   .field { margin-bottom: 16px; }
   label { display: block; font-size: .75rem; font-weight: 500; letter-spacing: .08em;
     text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
@@ -66,22 +56,19 @@
     display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
     transition: border-color .15s; }
   .btn-scan:hover { border-color: var(--accent); }
+  .btn-scan.active { border-color: var(--accent); background: rgba(79,142,247,.15); }
   .btn { width: 100%; margin-top: 4px; padding: 13px; background: var(--accent); color: #fff;
     border: none; border-radius: 8px; font-family: 'IBM Plex Sans', sans-serif;
     font-size: .95rem; font-weight: 600; cursor: pointer; transition: opacity .15s, transform .1s; }
   .btn:hover { opacity: .88; } .btn:active { transform: scale(.98); }
   .btn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
-
-  /* SCANNER VIDEO */
   .scanner-wrap { display: none; margin-bottom: 16px; border-radius: 10px; overflow: hidden;
-    border: 2px solid var(--accent); position: relative; }
-  .scanner-wrap video { width: 100%; display: block; max-height: 220px; object-fit: cover; }
-  .scanner-close { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,.6);
-    color: #fff; border: none; border-radius: 50%; width: 28px; height: 28px;
-    font-size: .9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-  .scanner-hint { text-align: center; font-size: .78rem; color: var(--accent); margin-bottom: 12px; display: none; }
-
-  /* SEMAFORO */
+    border: 2px solid var(--accent); position: relative; background: #000; }
+  .scanner-wrap #qr-reader, .scanner-wrap #qr-reader2 { width: 100% !important; border: none !important; background: transparent !important; }
+  .scanner-wrap #qr-reader *, .scanner-wrap #qr-reader2 * { border-color: var(--accent) !important; }
+  /* Nascondi elementi UI interni di html5-qrcode */
+  #qr-reader__dashboard, #qr-reader2__dashboard { display: none !important; }
+  .scanner-hint { text-align: center; font-size: .78rem; color: var(--accent); margin-bottom: 12px; padding: 6px; display: none; }
   .result-box { margin-top: 24px; border-radius: 12px; border: 1px solid var(--border);
     padding: 24px 20px; display: none; animation: fadeIn .3s ease; }
   @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
@@ -91,15 +78,13 @@
   .light-wrap { background: #111; border-radius: 50px; padding: 8px; display: inline-flex;
     flex-direction: column; gap: 8px; border: 2px solid #333; }
   .light { width: 42px; height: 42px; border-radius: 50%; transition: all .4s ease; }
-  .light.red-l    { background: #3a1010; } .light.yellow-l { background: #2e2a10; } .light.green-l { background: #0e2e14; }
+  .light.red-l { background: #3a1010; } .light.yellow-l { background: #2e2a10; } .light.green-l { background: #0e2e14; }
   .result-box.green .light.green-l { background: var(--green); box-shadow: 0 0 18px var(--green), 0 0 40px var(--green-glow); }
   .result-box.red   .light.red-l   { background: var(--red);   box-shadow: 0 0 18px var(--red),   0 0 40px var(--red-glow); }
   .result-status { text-align: center; font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; }
   .result-box.green .result-status { color: var(--green); } .result-box.red .result-status { color: var(--red); }
   .result-detail { font-size: .84rem; color: var(--muted); text-align: center; line-height: 1.6; }
   .result-detail strong { color: var(--text); font-family: 'IBM Plex Mono', monospace; }
-
-  /* TABELLA RISULTATI MATRICOLA */
   .results-table { margin-top: 16px; width: 100%; border-collapse: collapse; font-size: .82rem; }
   .results-table th { background: var(--bg); color: var(--muted); font-weight: 600;
     letter-spacing: .06em; text-transform: uppercase; padding: 8px 10px; text-align: left;
@@ -108,14 +93,11 @@
     font-family: 'IBM Plex Mono', monospace; color: var(--text); }
   .results-table tr:last-child td { border-bottom: none; }
   .results-table tr:hover td { background: rgba(79,142,247,.05); }
-  .badge-count { display: inline-block; background: var(--accent); color: #fff;
-    border-radius: 99px; padding: 1px 8px; font-size: .75rem; font-weight: 600; margin-left: 6px; }
-  .badge-red   { background: var(--red); }
-  .badge-green { background: var(--green); }
-
   .not-found { margin-top: 24px; padding: 18px; border-radius: 12px; border: 1px dashed var(--border);
     text-align: center; color: var(--muted); font-size: .88rem; display: none; animation: fadeIn .3s ease; }
   .not-found span { display: block; font-size: 1.4rem; margin-bottom: 6px; }
+  .chip { background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+    padding: 3px 8px; font-family: 'IBM Plex Mono', monospace; font-size: .78rem; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -124,9 +106,7 @@
   <h1>Controllo Matricola</h1>
   <p>Verifica registrazioni per matricola e codice modello</p>
 </div>
-
 <div class="card">
-  <!-- DB STATUS -->
   <div class="db-bar">
     <div class="db-dot loading" id="dbDot"></div>
     <span class="db-text" id="dbText">Caricamento database...</span>
@@ -134,13 +114,12 @@
   </div>
   <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
 
-  <!-- TABS -->
   <div class="tabs">
-    <div class="tab active" id="tab1" onclick="switchTab(1)">&#x1F50D; Matricola + Modello</div>
+    <div class="tab active" id="tab1" onclick="switchTab(1)">&#x1F50D; Matr. + Modello</div>
     <div class="tab" id="tab2" onclick="switchTab(2)">&#x1F4CB; Solo Matricola</div>
   </div>
 
-  <!-- PANEL 1: matricola + modello -->
+  <!-- PANEL 1 -->
   <div class="panel active" id="panel1">
     <div class="field">
       <label>Codice Modello</label>
@@ -150,38 +129,45 @@
       <label>Matricola (Nr. Seriale)</label>
       <div class="input-row">
         <input type="text" id="matricola" placeholder="es. 08389015" autocomplete="off" spellcheck="false" disabled>
-        <button class="btn-scan" id="scanBtn1" onclick="toggleScanner('scanner1','matricola')" title="Scansiona barcode" disabled>&#x1F4F7;</button>
+        <button class="btn-scan" id="scanBtn1" onclick="toggleScanner(1)" title="Scansiona barcode" disabled>&#x1F4F7;</button>
       </div>
     </div>
-    <div class="scanner-wrap" id="scanner1"><video id="video1" autoplay playsinline></video><button class="scanner-close" onclick="stopScanner('scanner1')">✕</button></div>
-    <div class="scanner-hint" id="hint1">Inquadra il barcode con la fotocamera</div>
+    <div class="scanner-wrap" id="scannerWrap1">
+      <div id="qr-reader"></div>
+    </div>
+    <div class="scanner-hint" id="hint1">Inquadra il barcode con la fotocamera — si chiude in automatico</div>
     <button class="btn" id="btnCerca1" onclick="cerca1()" disabled>Verifica</button>
     <div class="result-box" id="resultBox1">
-      <div class="semaforo"><div class="light-wrap"><div class="light red-l"></div><div class="light yellow-l"></div><div class="light green-l"></div></div></div>
+      <div class="semaforo"><div class="light-wrap">
+        <div class="light red-l"></div><div class="light yellow-l"></div><div class="light green-l"></div>
+      </div></div>
       <div class="result-status" id="resultStatus1"></div>
       <div class="result-detail" id="resultDetail1"></div>
-      <div style="margin-top:12px;text-align:center;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px" id="datesTitle1"></div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center" id="datesList1"></div>
+      <div id="datesTitle1" style="margin-top:12px;text-align:center;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;"></div>
+      <div id="datesList1" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;"></div>
     </div>
     <div class="not-found" id="notFound1"><span>&#x26A0;&#xFE0F;</span>Nessun risultato trovato.</div>
   </div>
 
-  <!-- PANEL 2: solo matricola -->
+  <!-- PANEL 2 -->
   <div class="panel" id="panel2">
     <div class="field">
       <label>Matricola (Nr. Seriale)</label>
       <div class="input-row">
         <input type="text" id="matricola2" placeholder="es. 08389015" autocomplete="off" spellcheck="false" disabled>
-        <button class="btn-scan" id="scanBtn2" onclick="toggleScanner('scanner2','matricola2')" title="Scansiona barcode" disabled>&#x1F4F7;</button>
+        <button class="btn-scan" id="scanBtn2" onclick="toggleScanner(2)" title="Scansiona barcode" disabled>&#x1F4F7;</button>
       </div>
     </div>
-    <div class="scanner-wrap" id="scanner2"><video id="video2" autoplay playsinline></video><button class="scanner-close" onclick="stopScanner('scanner2')">✕</button></div>
-    <div class="scanner-hint" id="hint2">Inquadra il barcode con la fotocamera</div>
+    <div class="scanner-wrap" id="scannerWrap2">
+      <div id="qr-reader2"></div>
+    </div>
+    <div class="scanner-hint" id="hint2">Inquadra il barcode con la fotocamera — si chiude in automatico</div>
     <button class="btn" id="btnCerca2" onclick="cerca2()" disabled>Cerca</button>
     <div class="result-box" id="resultBox2" style="padding:20px 16px;">
       <div class="result-status" id="resultStatus2"></div>
       <div class="result-detail" id="resultDetail2" style="margin-bottom:10px;"></div>
-      <table class="results-table" id="resultsTable2"><thead><tr><th>Data</th><th>Cod. Modello</th></tr></thead><tbody id="resultsTbody2"></tbody></table>
+      <table class="results-table"><thead><tr><th>Data</th><th>Cod. Modello</th></tr></thead>
+      <tbody id="resultsTbody2"></tbody></table>
     </div>
     <div class="not-found" id="notFound2"><span>&#x26A0;&#xFE0F;</span>Nessuna matricola trovata.</div>
   </div>
@@ -189,12 +175,11 @@
 
 <script>
 const CSV_URL = 'https://raw.githubusercontent.com/nicolasfriz89/matricola-db/main/programma.csv';
-let DB = null;         // key: seriale|modello -> [count, date1, date2, ...]
-let DB_BY_SERIAL = null; // key: seriale -> [ {modello, date}, ... ]
-let scannerActive = null;
-let codeReader = null;
+let DB = null, DB_BY_SERIAL = null;
+let scanner1 = null, scanner2 = null;
+let scannerOpen = 0; // 0=nessuno, 1=panel1, 2=panel2
 
-// ---- DB LOAD ----
+// ---- DB ----
 function setDBState(state, msg) {
   document.getElementById('dbDot').className = 'db-dot ' + state;
   const t = document.getElementById('dbText');
@@ -202,40 +187,36 @@ function setDBState(state, msg) {
   t.textContent = msg;
 }
 function setFormEnabled(on) {
-  ['modello','matricola','matricola2'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !on; });
-  ['btnCerca1','btnCerca2','scanBtn1','scanBtn2'].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !on; });
+  ['modello','matricola','matricola2'].forEach(id => { const el=document.getElementById(id); if(el) el.disabled=!on; });
+  ['btnCerca1','btnCerca2','scanBtn1','scanBtn2'].forEach(id => { const el=document.getElementById(id); if(el) el.disabled=!on; });
 }
-
 async function loadDB() {
-  DB = null; DB_BY_SERIAL = null;
-  setFormEnabled(false);
+  DB=null; DB_BY_SERIAL=null; setFormEnabled(false);
   setDBState('loading','Caricamento database...');
-  ['resultBox1','resultBox2','notFound1','notFound2'].forEach(id => document.getElementById(id).style.display='none');
-  const pb = document.getElementById('progressBar'), pf = document.getElementById('progressFill');
+  ['resultBox1','resultBox2','notFound1','notFound2'].forEach(id=>document.getElementById(id).style.display='none');
+  const pb=document.getElementById('progressBar'), pf=document.getElementById('progressFill');
   pb.style.display='block'; pf.style.width='15%';
   try {
-    const resp = await fetch(CSV_URL);
+    const resp=await fetch(CSV_URL);
     if(!resp.ok) throw new Error('HTTP '+resp.status);
     pf.style.width='55%';
-    const text = await resp.text();
+    const text=await resp.text();
     pf.style.width='80%';
-    [DB, DB_BY_SERIAL] = parseCSV(text);
+    [DB,DB_BY_SERIAL]=parseCSV(text);
     pf.style.width='100%';
     setTimeout(()=>pb.style.display='none',500);
-    setDBState('ok','✓ Database caricato — '+Object.keys(DB_BY_SERIAL).toLocaleString ? Object.keys(DB_BY_SERIAL).length.toLocaleString('it-IT')+' matricole' : Object.keys(DB_BY_SERIAL).length+' matricole');
+    setDBState('ok','✓ Database caricato — '+Object.keys(DB_BY_SERIAL).length.toLocaleString('it-IT')+' matricole');
     setFormEnabled(true);
   } catch(err) {
     pb.style.display='none';
     setDBState('error','✗ Errore: '+err.message);
   }
 }
-
 function parseCSV(text) {
   if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
-  const lines = text.split(/\r?\n/);
-  const header = lines[0];
-  const sep = header.includes(';')?';':',';
-  const cols = header.split(sep).map(c=>c.trim().replace(/^"|"$/g,'').toLowerCase());
+  const lines=text.split(/\r?\n/);
+  const header=lines[0], sep=header.includes(';')?';':',';
+  const cols=header.split(sep).map(c=>c.trim().replace(/^"|"$/g,'').toLowerCase());
   let iM=-1,iS=-1,iD=-1;
   cols.forEach((c,i)=>{
     if(c.includes('modello')||c.includes('model')) iM=i;
@@ -244,35 +225,32 @@ function parseCSV(text) {
   });
   if(iD<0)iD=0; if(iM<0)iM=1; if(iS<0)iS=2;
   const db={}, dbS={};
-  for(let i=1;i<lines.length;i++){
+  for(let i=1;i<lines.length;i++) {
     const line=lines[i].trim(); if(!line) continue;
     const parts=line.split(sep).map(p=>p.trim().replace(/^"|"$/g,''));
     if(parts.length<=Math.max(iM,iS)) continue;
-    const mod=(parts[iM]||'').toUpperCase();
-    const ser=(parts[iS]||'').toUpperCase();
-    const dat= parts[iD]||'';
+    const mod=(parts[iM]||'').toUpperCase(), ser=(parts[iS]||'').toUpperCase(), dat=parts[iD]||'';
     if(!mod||!ser) continue;
-    // DB combinato
     const key=ser+'|'+mod;
     if(!db[key]) db[key]=[0];
     db[key][0]++; if(dat) db[key].push(dat);
-    // DB per seriale
     if(!dbS[ser]) dbS[ser]={};
     if(!dbS[ser][mod]) dbS[ser][mod]=[];
     if(dat) dbS[ser][mod].push(dat);
   }
-  return [db, dbS];
+  return [db,dbS];
 }
 
-// ---- TAB SWITCH ----
+// ---- TABS ----
 function switchTab(n) {
+  stopScanner(1); stopScanner(2);
   document.getElementById('tab1').className='tab'+(n===1?' active':'');
   document.getElementById('tab2').className='tab'+(n===2?' active':'');
   document.getElementById('panel1').className='panel'+(n===1?' active':'');
   document.getElementById('panel2').className='panel'+(n===2?' active':'');
 }
 
-// ---- CERCA 1: matricola + modello ----
+// ---- CERCA 1 ----
 function cerca1() {
   if(!DB){alert('Database non caricato.');return;}
   const mod=document.getElementById('modello').value.trim().toUpperCase();
@@ -288,13 +266,13 @@ function cerca1() {
   rb.classList.add(isRed?'red':'green'); rb.style.display='block';
   document.getElementById('resultStatus1').textContent=(isRed?'🔴  ATTENZIONE — ':'🟢  OK — ')+count+' registrazion'+(count===1?'e':'i');
   document.getElementById('resultDetail1').innerHTML='<strong>'+ser+'</strong> / <strong>'+mod+'</strong> — trovata <strong>'+count+' volt'+(count===1?'a':'e')+'</strong>.'+(isRed?' Soglia superata (≥ 4).':' Sotto la soglia (< 4).');
-  if(dates.length){
+  if(dates.length) {
     document.getElementById('datesTitle1').textContent='Date di registrazione';
-    dates.forEach(d=>{const c=document.createElement('span');c.style.cssText='background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-family:"IBM Plex Mono",monospace;font-size:.78rem;color:var(--muted);';c.textContent=d;document.getElementById('datesList1').appendChild(c);});
+    dates.forEach(d=>{ const c=document.createElement('span'); c.className='chip'; c.textContent=d; document.getElementById('datesList1').appendChild(c); });
   }
 }
 
-// ---- CERCA 2: solo matricola ----
+// ---- CERCA 2 ----
 function cerca2() {
   if(!DB_BY_SERIAL){alert('Database non caricato.');return;}
   const ser=document.getElementById('matricola2').value.trim().toUpperCase();
@@ -304,81 +282,96 @@ function cerca2() {
   if(!ser){alert('Inserisci la Matricola.');return;}
   const entry=DB_BY_SERIAL[ser];
   if(!entry||Object.keys(entry).length===0){nf.style.display='block';return;}
-
-  // Conta totale
-  let totalCount=0;
-  const rows=[];
-  Object.keys(entry).forEach(mod=>{
-    const dates=entry[mod];
-    totalCount+=dates.length;
-    dates.forEach(d=>rows.push({date:d,mod:mod}));
-  });
-  // Ordina per data
-  rows.sort((a,b)=>{
-    const pa=a.date.split('/'); const pb=b.date.split('/');
-    const da=new Date(pa[2],pa[1]-1,pa[0]); const db2=new Date(pb[2],pb[1]-1,pb[0]);
-    return da-db2;
-  });
-
-  const isRed = totalCount>=4;
+  let totalCount=0; const rows=[];
+  Object.keys(entry).forEach(mod=>{ const dates=entry[mod]; totalCount+=dates.length; dates.forEach(d=>rows.push({date:d,mod:mod})); });
+  rows.sort((a,b)=>{ const pa=a.date.split('/'),pb=b.date.split('/'); return new Date(pa[2],pa[1]-1,pa[0])-new Date(pb[2],pb[1]-1,pb[0]); });
+  const isRed=totalCount>=4;
   rb.className='result-box '+(isRed?'red':'green');
-
-  // Semaforo nel panel 2 - solo testo
-  document.getElementById('resultStatus2').textContent=(isRed?'🔴  ATTENZIONE — ':'🟢  OK — ')+totalCount+' registrazion'+(totalCount===1?'e':'i');
   document.getElementById('resultStatus2').style.color=isRed?'var(--red)':'var(--green)';
+  document.getElementById('resultStatus2').textContent=(isRed?'🔴  ATTENZIONE — ':'🟢  OK — ')+totalCount+' registrazion'+(totalCount===1?'e':'i');
   document.getElementById('resultDetail2').innerHTML='Matricola <strong>'+ser+'</strong> trovata <strong>'+totalCount+' volt'+(totalCount===1?'a':'e')+'</strong> in '+Object.keys(entry).length+' modell'+(Object.keys(entry).length===1?'o':'i')+'.';
-
   const tbody=document.getElementById('resultsTbody2');
-  rows.forEach(r=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML='<td>'+r.date+'</td><td>'+r.mod+'</td>';
-    tbody.appendChild(tr);
-  });
+  rows.forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML='<td>'+r.date+'</td><td>'+r.mod+'</td>'; tbody.appendChild(tr); });
   rb.style.display='block';
 }
 
-// ---- BARCODE SCANNER ----
-async function toggleScanner(wrapperId, targetInputId) {
-  if(scannerActive===wrapperId) { stopScanner(wrapperId); return; }
-  if(scannerActive) stopScanner(scannerActive);
-  const wrap=document.getElementById(wrapperId);
-  const hint=document.getElementById(wrapperId==='scanner1'?'hint1':'hint2');
-  const videoEl=document.getElementById(wrapperId==='scanner1'?'video1':'video2');
-  wrap.style.display='block'; hint.style.display='block'; scannerActive=wrapperId;
+// ---- SCANNER (html5-qrcode) ----
+async function toggleScanner(panel) {
+  if(scannerOpen===panel) { stopScanner(panel); return; }
+  if(scannerOpen) stopScanner(scannerOpen);
+  const wrId = panel===1 ? 'scannerWrap1' : 'scannerWrap2';
+  const hintId = panel===1 ? 'hint1' : 'hint2';
+  const qrDivId = panel===1 ? 'qr-reader' : 'qr-reader2';
+  const btnId = panel===1 ? 'scanBtn1' : 'scanBtn2';
+  const inputId = panel===1 ? 'matricola' : 'matricola2';
+
+  document.getElementById(wrId).style.display='block';
+  document.getElementById(hintId).style.display='block';
+  document.getElementById(btnId).classList.add('active');
+  scannerOpen=panel;
+
+  const scanner = new Html5Qrcode(qrDivId);
+  if(panel===1) scanner1=scanner; else scanner2=scanner;
+
+  const config = {
+    fps: 10,
+    qrbox: { width: 280, height: 140 },
+    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+    experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+  };
+
   try {
-    if(typeof ZXing === 'undefined') throw new Error('Libreria scanner non disponibile');
-    codeReader = new ZXing.BrowserMultiFormatReader();
-    const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
-    // Preferisci fotocamera posteriore
-    let deviceId = devices.length>0 ? devices[0].deviceId : undefined;
-    const back = devices.find(d=>/(back|rear|environment)/i.test(d.label));
-    if(back) deviceId=back.deviceId;
-    codeReader.decodeFromVideoDevice(deviceId, videoEl, (result, err)=>{
-      if(result){
-        document.getElementById(targetInputId).value = result.getText();
-        stopScanner(wrapperId);
-        // Auto-cerca dopo scansione
-        setTimeout(()=>{ wrapperId==='scanner1'?cerca1():cerca2(); }, 300);
-      }
-    });
+    // Prova fotocamera posteriore
+    await scanner.start(
+      { facingMode: "environment" },
+      config,
+      (decodedText) => {
+        document.getElementById(inputId).value = decodedText;
+        stopScanner(panel);
+        setTimeout(()=>panel===1?cerca1():cerca2(), 300);
+      },
+      () => {} // ignore errors durante scansione
+    );
   } catch(e) {
-    hint.textContent='Scanner non disponibile: '+e.message;
-    hint.style.color='var(--red)';
+    // Fallback: usa qualsiasi fotocamera
+    try {
+      await scanner.start(
+        { facingMode: "user" },
+        config,
+        (decodedText) => {
+          document.getElementById(inputId).value = decodedText;
+          stopScanner(panel);
+          setTimeout(()=>panel===1?cerca1():cerca2(), 300);
+        },
+        () => {}
+      );
+    } catch(e2) {
+      document.getElementById(hintId).style.color='var(--red)';
+      document.getElementById(hintId).textContent='Fotocamera non disponibile: '+e2;
+      document.getElementById(btnId).classList.remove('active');
+      document.getElementById(wrId).style.display='none';
+      scannerOpen=0;
+    }
   }
 }
 
-function stopScanner(wrapperId) {
-  if(codeReader) { try{codeReader.reset();}catch(e){} codeReader=null; }
-  const wrap=document.getElementById(wrapperId);
-  const hint=document.getElementById(wrapperId==='scanner1'?'hint1':'hint2');
-  const videoEl=document.getElementById(wrapperId==='scanner1'?'video1':'video2');
-  if(videoEl.srcObject) { videoEl.srcObject.getTracks().forEach(t=>t.stop()); videoEl.srcObject=null; }
-  wrap.style.display='none'; hint.style.display='none'; hint.style.color='var(--accent)';
-  hint.textContent='Inquadra il barcode con la fotocamera';
-  scannerActive=null;
+function stopScanner(panel) {
+  const scanner = panel===1 ? scanner1 : scanner2;
+  if(scanner) {
+    try { scanner.stop().catch(()=>{}); } catch(e) {}
+    if(panel===1) scanner1=null; else scanner2=null;
+  }
+  const wrId = panel===1?'scannerWrap1':'scannerWrap2';
+  const hintId = panel===1?'hint1':'hint2';
+  const btnId = panel===1?'scanBtn1':'scanBtn2';
+  document.getElementById(wrId).style.display='none';
+  document.getElementById(hintId).style.display='none';
+  document.getElementById(hintId).style.color='var(--accent)';
+  document.getElementById(hintId).textContent='Inquadra il barcode con la fotocamera — si chiude in automatico';
+  document.getElementById(btnId).classList.remove('active');
+  if(scannerOpen===panel) scannerOpen=0;
 }
 
-// Enter key
 document.addEventListener('keydown', e=>{
   if(e.key!=='Enter') return;
   if(document.getElementById('panel1').classList.contains('active') && !document.getElementById('btnCerca1').disabled) cerca1();
