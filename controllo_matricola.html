@@ -295,6 +295,30 @@ function cerca2() {
   rb.style.display='block';
 }
 
+
+// ---- PARSE BARCODE COMPOSITO ----
+function parseBarcodeIntoFields(text, panel) {
+  text = text.trim();
+  // Formato composito: [241]NSDT [21]17348
+  const modMatch = text.match(/\[241\]([^\s\[\]]+)/i);
+  const serMatch = text.match(/\[21\]([^\s\[\]]+)/i);
+  if (modMatch && serMatch) {
+    if (panel === 1) {
+      document.getElementById('modello').value = modMatch[1].toUpperCase();
+      document.getElementById('matricola').value = serMatch[1].toUpperCase();
+    } else {
+      document.getElementById('matricola2').value = serMatch[1].toUpperCase();
+    }
+    return;
+  }
+  if (serMatch) {
+    document.getElementById(panel===1?'matricola':'matricola2').value = serMatch[1].toUpperCase();
+    return;
+  }
+  // Valore semplice
+  document.getElementById(panel===1?'matricola':'matricola2').value = text;
+}
+
 // ---- SCANNER (html5-qrcode) ----
 async function toggleScanner(panel) {
   if(scannerOpen===panel) { stopScanner(panel); return; }
@@ -315,9 +339,10 @@ async function toggleScanner(panel) {
 
   const config = {
     fps: 10,
-    qrbox: { width: 280, height: 140 },
+    qrbox: { width: 320, height: 180 },
     supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
-    experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+    experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+    aspectRatio: 1.5
   };
 
   try {
@@ -326,7 +351,7 @@ async function toggleScanner(panel) {
       { facingMode: "environment" },
       config,
       (decodedText) => {
-        document.getElementById(inputId).value = decodedText;
+        parseBarcodeIntoFields(decodedText, panel);
         stopScanner(panel);
         setTimeout(()=>panel===1?cerca1():cerca2(), 300);
       },
