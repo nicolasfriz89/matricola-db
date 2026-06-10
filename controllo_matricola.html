@@ -64,11 +64,10 @@
   .btn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
   .scanner-wrap { display: none; margin-bottom: 16px; border-radius: 10px; overflow: hidden;
     border: 2px solid var(--accent); position: relative; background: #000; }
-  .scanner-wrap #qr-reader, .scanner-wrap #qr-reader2 { width: 100% !important; border: none !important; background: transparent !important; }
-  .scanner-wrap #qr-reader *, .scanner-wrap #qr-reader2 * { border-color: var(--accent) !important; }
-  /* Nascondi elementi UI interni di html5-qrcode */
+  .scanner-wrap > div { width: 100% !important; border: none !important; background: transparent !important; }
   #qr-reader__dashboard, #qr-reader2__dashboard { display: none !important; }
   .scanner-hint { text-align: center; font-size: .78rem; color: var(--accent); margin-bottom: 12px; padding: 6px; display: none; }
+  /* RISULTATI */
   .result-box { margin-top: 24px; border-radius: 12px; border: 1px solid var(--border);
     padding: 24px 20px; display: none; animation: fadeIn .3s ease; }
   @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
@@ -83,21 +82,31 @@
   .result-box.red   .light.red-l   { background: var(--red);   box-shadow: 0 0 18px var(--red),   0 0 40px var(--red-glow); }
   .result-status { text-align: center; font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; }
   .result-box.green .result-status { color: var(--green); } .result-box.red .result-status { color: var(--red); }
-  .result-detail { font-size: .84rem; color: var(--muted); text-align: center; line-height: 1.6; }
+  .result-detail { font-size: .84rem; color: var(--muted); text-align: center; line-height: 1.6; margin-bottom: 4px; }
   .result-detail strong { color: var(--text); font-family: 'IBM Plex Mono', monospace; }
-  .results-table { margin-top: 16px; width: 100%; border-collapse: collapse; font-size: .82rem; }
+  /* TABELLA */
+  .section-title { font-size: .72rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--muted); margin: 16px 0 8px; }
+  .results-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
   .results-table th { background: var(--bg); color: var(--muted); font-weight: 600;
-    letter-spacing: .06em; text-transform: uppercase; padding: 8px 10px; text-align: left;
-    border-bottom: 1px solid var(--border); font-size: .72rem; }
-  .results-table td { padding: 7px 10px; border-bottom: 1px solid rgba(42,45,58,.6);
-    font-family: 'IBM Plex Mono', monospace; color: var(--text); }
+    letter-spacing: .06em; text-transform: uppercase; padding: 7px 8px; text-align: left;
+    border-bottom: 1px solid var(--border); font-size: .7rem; }
+  .results-table td { padding: 7px 8px; border-bottom: 1px solid rgba(42,45,58,.5);
+    font-family: 'IBM Plex Mono', monospace; color: var(--text); vertical-align: top; }
   .results-table tr:last-child td { border-bottom: none; }
-  .results-table tr:hover td { background: rgba(79,142,247,.05); }
+  .results-table tr:hover td { background: rgba(79,142,247,.04); }
+  /* BADGE INTERVENTO */
+  .flags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .flag-chip { font-size: .7rem; padding: 2px 6px; border-radius: 4px; font-family: 'IBM Plex Sans', sans-serif; font-weight: 600; }
+  .flag-sost { background: rgba(239,68,68,.15); color: var(--red); border: 1px solid rgba(239,68,68,.3); }
+  .flag-rip  { background: rgba(245,158,11,.15); color: #f59e0b; border: 1px solid rgba(245,158,11,.3); }
+  .flag-reg  { background: rgba(79,142,247,.15); color: var(--accent); border: 1px solid rgba(79,142,247,.3); }
+  .flag-pul  { background: rgba(34,197,94,.15); color: var(--green); border: 1px solid rgba(34,197,94,.3); }
+  .chip { background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+    padding: 3px 8px; font-family: 'IBM Plex Mono', monospace; font-size: .78rem; color: var(--muted); }
   .not-found { margin-top: 24px; padding: 18px; border-radius: 12px; border: 1px dashed var(--border);
     text-align: center; color: var(--muted); font-size: .88rem; display: none; animation: fadeIn .3s ease; }
   .not-found span { display: block; font-size: 1.4rem; margin-bottom: 6px; }
-  .chip { background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
-    padding: 3px 8px; font-family: 'IBM Plex Mono', monospace; font-size: .78rem; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -113,7 +122,6 @@
     <button class="btn-reload" onclick="loadDB()">&#x21BB; Aggiorna</button>
   </div>
   <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
-
   <div class="tabs">
     <div class="tab active" id="tab1" onclick="switchTab(1)">&#x1F50D; Matr. + Modello</div>
     <div class="tab" id="tab2" onclick="switchTab(2)">&#x1F4CB; Solo Matricola</div>
@@ -132,10 +140,8 @@
         <button class="btn-scan" id="scanBtn1" onclick="toggleScanner(1)" title="Scansiona barcode" disabled>&#x1F4F7;</button>
       </div>
     </div>
-    <div class="scanner-wrap" id="scannerWrap1">
-      <div id="qr-reader"></div>
-    </div>
-    <div class="scanner-hint" id="hint1">Inquadra il barcode con la fotocamera — si chiude in automatico</div>
+    <div class="scanner-wrap" id="scannerWrap1"><div id="qr-reader"></div></div>
+    <div class="scanner-hint" id="hint1">Inquadra il barcode — si chiude in automatico</div>
     <button class="btn" id="btnCerca1" onclick="cerca1()" disabled>Verifica</button>
     <div class="result-box" id="resultBox1">
       <div class="semaforo"><div class="light-wrap">
@@ -143,8 +149,13 @@
       </div></div>
       <div class="result-status" id="resultStatus1"></div>
       <div class="result-detail" id="resultDetail1"></div>
-      <div id="datesTitle1" style="margin-top:12px;text-align:center;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;"></div>
-      <div id="datesList1" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;"></div>
+      <div class="section-title" id="datesTitle1" style="display:none">Date di registrazione</div>
+      <div id="datesList1" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      <div class="section-title" id="intTitle1" style="display:none">Interventi tecnici</div>
+      <table class="results-table" id="intTable1" style="display:none">
+        <thead><tr><th>Data Int.</th><th>Componente</th><th>Azioni</th></tr></thead>
+        <tbody id="intTbody1"></tbody>
+      </table>
     </div>
     <div class="not-found" id="notFound1"><span>&#x26A0;&#xFE0F;</span>Nessun risultato trovato.</div>
   </div>
@@ -158,16 +169,20 @@
         <button class="btn-scan" id="scanBtn2" onclick="toggleScanner(2)" title="Scansiona barcode" disabled>&#x1F4F7;</button>
       </div>
     </div>
-    <div class="scanner-wrap" id="scannerWrap2">
-      <div id="qr-reader2"></div>
-    </div>
-    <div class="scanner-hint" id="hint2">Inquadra il barcode con la fotocamera — si chiude in automatico</div>
+    <div class="scanner-wrap" id="scannerWrap2"><div id="qr-reader2"></div></div>
+    <div class="scanner-hint" id="hint2">Inquadra il barcode — si chiude in automatico</div>
     <button class="btn" id="btnCerca2" onclick="cerca2()" disabled>Cerca</button>
     <div class="result-box" id="resultBox2" style="padding:20px 16px;">
       <div class="result-status" id="resultStatus2"></div>
       <div class="result-detail" id="resultDetail2" style="margin-bottom:10px;"></div>
-      <table class="results-table"><thead><tr><th>Data</th><th>Cod. Modello</th></tr></thead>
-      <tbody id="resultsTbody2"></tbody></table>
+      <div class="section-title">Registrazioni</div>
+      <table class="results-table"><thead><tr><th>Data Reg.</th><th>Modello</th></tr></thead>
+        <tbody id="resultsTbody2"></tbody></table>
+      <div class="section-title" id="intTitle2" style="display:none;margin-top:16px;">Interventi tecnici</div>
+      <table class="results-table" id="intTable2" style="display:none">
+        <thead><tr><th>Data Int.</th><th>Modello</th><th>Componente</th><th>Azioni</th></tr></thead>
+        <tbody id="intTbody2"></tbody>
+      </table>
     </div>
     <div class="not-found" id="notFound2"><span>&#x26A0;&#xFE0F;</span>Nessuna matricola trovata.</div>
   </div>
@@ -177,9 +192,9 @@
 const CSV_URL = 'https://raw.githubusercontent.com/nicolasfriz89/matricola-db/main/programma.csv';
 let DB = null, DB_BY_SERIAL = null;
 let scanner1 = null, scanner2 = null;
-let scannerOpen = 0; // 0=nessuno, 1=panel1, 2=panel2
+let scannerOpen = 0;
 
-// ---- DB ----
+// ---- DB LOAD ----
 function setDBState(state, msg) {
   document.getElementById('dbDot').className = 'db-dot ' + state;
   const t = document.getElementById('dbText');
@@ -187,8 +202,8 @@ function setDBState(state, msg) {
   t.textContent = msg;
 }
 function setFormEnabled(on) {
-  ['modello','matricola','matricola2'].forEach(id => { const el=document.getElementById(id); if(el) el.disabled=!on; });
-  ['btnCerca1','btnCerca2','scanBtn1','scanBtn2'].forEach(id => { const el=document.getElementById(id); if(el) el.disabled=!on; });
+  ['modello','matricola','matricola2'].forEach(id=>{ const el=document.getElementById(id); if(el) el.disabled=!on; });
+  ['btnCerca1','btnCerca2','scanBtn1','scanBtn2'].forEach(id=>{ const el=document.getElementById(id); if(el) el.disabled=!on; });
 }
 async function loadDB() {
   DB=null; DB_BY_SERIAL=null; setFormEnabled(false);
@@ -212,33 +227,67 @@ async function loadDB() {
     setDBState('error','✗ Errore: '+err.message);
   }
 }
+
+function isVal(v) { return v && v !== '#N/D' && v !== 'ND' && v.trim() !== ''; }
+
+function flagsHtml(sost, rip, reg, pul) {
+  let f = '';
+  if(isVal(sost) && sost.toUpperCase()==='S') f += '<span class="flag-chip flag-sost">Sostituito</span>';
+  if(isVal(rip)  && rip.toUpperCase()==='S')  f += '<span class="flag-chip flag-rip">Riparato</span>';
+  if(isVal(reg)  && reg.toUpperCase()==='S')  f += '<span class="flag-chip flag-reg">Regolato</span>';
+  if(isVal(pul)  && pul.toUpperCase()==='S')  f += '<span class="flag-chip flag-pul">Pulito</span>';
+  return f ? '<div class="flags">'+f+'</div>' : '—';
+}
+
 function parseCSV(text) {
   if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
-  const lines=text.split(/\r?\n/);
+  const lines=text.split(/?
+/);
   const header=lines[0], sep=header.includes(';')?';':',';
   const cols=header.split(sep).map(c=>c.trim().replace(/^"|"$/g,'').toLowerCase());
-  let iM=-1,iS=-1,iD=-1;
+  // Indici colonne
+  let iDR=-1,iM=-1,iS=-1,iDI=-1,iCC=-1,iSost=-1,iRip=-1,iReg=-1,iPul=-1;
   cols.forEach((c,i)=>{
-    if(c.includes('modello')||c.includes('model')) iM=i;
-    if(c.includes('seriale')||c.includes('serial')||c.includes('matricola')) iS=i;
-    if(c.includes('data')||c.includes('date')||c.includes('registr')) iD=i;
+    if(c.includes('data_reg')||c==='data di registrazione') iDR=i;
+    if(c.includes('modello')||c==='cod. modello') iM=i;
+    if(c.includes('seriale')||c==='nr. seriale') iS=i;
+    if(c.includes('data_int')) iDI=i;
+    if(c.includes('cod - comp')||c.includes('cod_comp')||c.includes('componente')) iCC=i;
+    if(c.includes('flg_sost')||c.includes('sost')) iSost=i;
+    if(c.includes('flg_rip')||c.includes('_rip')) iRip=i;
+    if(c.includes('flg_reg')||c.includes('_reg')) iReg=i;
+    if(c.includes('flg_pul')||c.includes('_pul')) iPul=i;
   });
-  if(iD<0)iD=0; if(iM<0)iM=1; if(iS<0)iS=2;
+  if(iDR<0)iDR=0; if(iM<0)iM=1; if(iS<0)iS=2; if(iDI<0)iDI=3; if(iCC<0)iCC=5;
+  if(iSost<0)iSost=8; if(iRip<0)iRip=9; if(iReg<0)iReg=10; if(iPul<0)iPul=11;
+
   const db={}, dbS={};
   for(let i=1;i<lines.length;i++) {
     const line=lines[i].trim(); if(!line) continue;
-    const parts=line.split(sep).map(p=>p.trim().replace(/^"|"$/g,''));
-    if(parts.length<=Math.max(iM,iS)) continue;
-    const mod=(parts[iM]||'').toUpperCase(), ser=(parts[iS]||'').toUpperCase(), dat=parts[iD]||'';
+    const p=line.split(sep).map(x=>x.trim().replace(/^"|"$/g,''));
+    if(p.length<=Math.max(iM,iS)) continue;
+    const mod=(p[iM]||'').toUpperCase(), ser=(p[iS]||'').toUpperCase(), dr=p[iDR]||'';
+    const di=p[iDI]||'', cc=p[iCC]||'';
+    const sost=p[iSost]||'', rip=p[iRip]||'', reg=p[iReg]||'', pul=p[iPul]||'';
     if(!mod||!ser) continue;
+
+    // Intervento valido?
+    const hasInt = isVal(di);
+
+    // DB combinato (matricola+modello)
     const key=ser+'|'+mod;
-    if(!db[key]) db[key]=[0];
-    db[key][0]++; if(dat) db[key].push(dat);
+    if(!db[key]) db[key]={count:0, dates:[], interventi:[]};
+    db[key].count++;
+    if(dr) db[key].dates.push(dr);
+    if(hasInt) db[key].interventi.push({di, cc, sost, rip, reg, pul});
+
+    // DB per seriale
     if(!dbS[ser]) dbS[ser]={};
-    if(!dbS[ser][mod]) dbS[ser][mod]=[];
-    if(dat) dbS[ser][mod].push(dat);
+    if(!dbS[ser][mod]) dbS[ser][mod]={dates:[], interventi:[]};
+    if(dr) dbS[ser][mod].dates.push(dr);
+    if(hasInt) dbS[ser][mod].interventi.push({di, cc, sost, rip, reg, pul, mod});
   }
-  return [db,dbS];
+  return [db, dbS];
 }
 
 // ---- TABS ----
@@ -258,17 +307,31 @@ function cerca1() {
   const rb=document.getElementById('resultBox1'), nf=document.getElementById('notFound1');
   rb.style.display='none'; rb.className='result-box'; nf.style.display='none';
   document.getElementById('datesList1').innerHTML='';
-  document.getElementById('datesTitle1').textContent='';
+  document.getElementById('datesTitle1').style.display='none';
+  document.getElementById('intTitle1').style.display='none';
+  document.getElementById('intTable1').style.display='none';
+  document.getElementById('intTbody1').innerHTML='';
   if(!mod||!ser){alert('Inserisci Codice Modello e Matricola.');return;}
   const entry=DB[ser+'|'+mod];
   if(!entry){nf.style.display='block';return;}
-  const count=entry[0], dates=entry.slice(1), isRed=count>=4;
+  const count=entry.count, isRed=count>=4;
   rb.classList.add(isRed?'red':'green'); rb.style.display='block';
   document.getElementById('resultStatus1').textContent=(isRed?'🔴  ATTENZIONE — ':'🟢  OK — ')+count+' registrazion'+(count===1?'e':'i');
   document.getElementById('resultDetail1').innerHTML='<strong>'+ser+'</strong> / <strong>'+mod+'</strong> — trovata <strong>'+count+' volt'+(count===1?'a':'e')+'</strong>.'+(isRed?' Soglia superata (≥ 4).':' Sotto la soglia (< 4).');
-  if(dates.length) {
-    document.getElementById('datesTitle1').textContent='Date di registrazione';
-    dates.forEach(d=>{ const c=document.createElement('span'); c.className='chip'; c.textContent=d; document.getElementById('datesList1').appendChild(c); });
+  if(entry.dates.length) {
+    document.getElementById('datesTitle1').style.display='block';
+    const dl=document.getElementById('datesList1');
+    entry.dates.forEach(d=>{ const c=document.createElement('span'); c.className='chip'; c.textContent=d; dl.appendChild(c); });
+  }
+  if(entry.interventi.length) {
+    document.getElementById('intTitle1').style.display='block';
+    document.getElementById('intTable1').style.display='table';
+    const tb=document.getElementById('intTbody1');
+    entry.interventi.forEach(x=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML='<td>'+x.di+'</td><td style="font-size:.75rem;color:var(--muted)">'+( isVal(x.cc)?x.cc:'—' )+'</td><td>'+flagsHtml(x.sost,x.rip,x.reg,x.pul)+'</td>';
+      tb.appendChild(tr);
+    });
   }
 }
 
@@ -279,27 +342,50 @@ function cerca2() {
   const rb=document.getElementById('resultBox2'), nf=document.getElementById('notFound2');
   rb.style.display='none'; nf.style.display='none';
   document.getElementById('resultsTbody2').innerHTML='';
+  document.getElementById('intTitle2').style.display='none';
+  document.getElementById('intTable2').style.display='none';
+  document.getElementById('intTbody2').innerHTML='';
   if(!ser){alert('Inserisci la Matricola.');return;}
   const entry=DB_BY_SERIAL[ser];
   if(!entry||Object.keys(entry).length===0){nf.style.display='block';return;}
-  let totalCount=0; const rows=[];
-  Object.keys(entry).forEach(mod=>{ const dates=entry[mod]; totalCount+=dates.length; dates.forEach(d=>rows.push({date:d,mod:mod})); });
-  rows.sort((a,b)=>{ const pa=a.date.split('/'),pb=b.date.split('/'); return new Date(pa[2],pa[1]-1,pa[0])-new Date(pb[2],pb[1]-1,pb[0]); });
+  let totalCount=0; const rows=[], intRows=[];
+  Object.keys(entry).forEach(mod=>{
+    const e=entry[mod];
+    totalCount+=e.dates.length;
+    e.dates.forEach(d=>rows.push({date:d,mod:mod}));
+    e.interventi.forEach(x=>intRows.push({...x,mod:mod}));
+  });
+  rows.sort((a,b)=>{
+    const pa=a.date.split('/'),pb=b.date.split('/');
+    return new Date(pa[2],pa[1]-1,pa[0])-new Date(pb[2],pb[1]-1,pb[0]);
+  });
+  intRows.sort((a,b)=>{
+    const pa=a.di.split('/'),pb=b.di.split('/');
+    return new Date(pa[2],pa[1]-1,pa[0])-new Date(pb[2],pb[1]-1,pb[0]);
+  });
   const isRed=totalCount>=4;
   rb.className='result-box '+(isRed?'red':'green');
   document.getElementById('resultStatus2').style.color=isRed?'var(--red)':'var(--green)';
   document.getElementById('resultStatus2').textContent=(isRed?'🔴  ATTENZIONE — ':'🟢  OK — ')+totalCount+' registrazion'+(totalCount===1?'e':'i');
-  document.getElementById('resultDetail2').innerHTML='Matricola <strong>'+ser+'</strong> trovata <strong>'+totalCount+' volt'+(totalCount===1?'a':'e')+'</strong> in '+Object.keys(entry).length+' modell'+(Object.keys(entry).length===1?'o':'i')+'.';
-  const tbody=document.getElementById('resultsTbody2');
-  rows.forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML='<td>'+r.date+'</td><td>'+r.mod+'</td>'; tbody.appendChild(tr); });
+  document.getElementById('resultDetail2').innerHTML='Matricola <strong>'+ser+'</strong> — '+Object.keys(entry).length+' modell'+(Object.keys(entry).length===1?'o':'i')+'.';
+  const tb=document.getElementById('resultsTbody2');
+  rows.forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML='<td>'+r.date+'</td><td>'+r.mod+'</td>'; tb.appendChild(tr); });
+  if(intRows.length) {
+    document.getElementById('intTitle2').style.display='block';
+    document.getElementById('intTable2').style.display='table';
+    const tb2=document.getElementById('intTbody2');
+    intRows.forEach(x=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML='<td>'+x.di+'</td><td>'+x.mod+'</td><td style="font-size:.75rem;color:var(--muted)">'+( isVal(x.cc)?x.cc:'—' )+'</td><td>'+flagsHtml(x.sost,x.rip,x.reg,x.pul)+'</td>';
+      tb2.appendChild(tr);
+    });
+  }
   rb.style.display='block';
 }
-
 
 // ---- PARSE BARCODE COMPOSITO ----
 function parseBarcodeIntoFields(text, panel) {
   text = text.trim();
-  // Formato composito: [241]NSDT [21]17348
   const modMatch = text.match(/\[241\]([^\s\[\]]+)/i);
   const serMatch = text.match(/\[21\]([^\s\[\]]+)/i);
   if (modMatch && serMatch) {
@@ -315,94 +401,65 @@ function parseBarcodeIntoFields(text, panel) {
     document.getElementById(panel===1?'matricola':'matricola2').value = serMatch[1].toUpperCase();
     return;
   }
-  // Valore semplice
   document.getElementById(panel===1?'matricola':'matricola2').value = text;
 }
 
-// ---- SCANNER (html5-qrcode) ----
+// ---- SCANNER ----
 async function toggleScanner(panel) {
   if(scannerOpen===panel) { stopScanner(panel); return; }
   if(scannerOpen) stopScanner(scannerOpen);
-  const wrId = panel===1 ? 'scannerWrap1' : 'scannerWrap2';
-  const hintId = panel===1 ? 'hint1' : 'hint2';
-  const qrDivId = panel===1 ? 'qr-reader' : 'qr-reader2';
-  const btnId = panel===1 ? 'scanBtn1' : 'scanBtn2';
-  const inputId = panel===1 ? 'matricola' : 'matricola2';
-
+  const wrId=panel===1?'scannerWrap1':'scannerWrap2';
+  const hintId=panel===1?'hint1':'hint2';
+  const qrDivId=panel===1?'qr-reader':'qr-reader2';
+  const btnId=panel===1?'scanBtn1':'scanBtn2';
   document.getElementById(wrId).style.display='block';
   document.getElementById(hintId).style.display='block';
   document.getElementById(btnId).classList.add('active');
   scannerOpen=panel;
-
-  const scanner = new Html5Qrcode(qrDivId);
+  const scanner=new Html5Qrcode(qrDivId);
   if(panel===1) scanner1=scanner; else scanner2=scanner;
-
-  const config = {
-    fps: 10,
-    qrbox: { width: 320, height: 180 },
-    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
-    experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-    aspectRatio: 1.5
-  };
-
+  const config={fps:10, qrbox:{width:320,height:180},
+    supportedScanTypes:[Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+    experimentalFeatures:{useBarCodeDetectorIfSupported:true},
+    aspectRatio:1.5};
   try {
-    // Prova fotocamera posteriore
-    await scanner.start(
-      { facingMode: "environment" },
-      config,
-      (decodedText) => {
-        parseBarcodeIntoFields(decodedText, panel);
-        stopScanner(panel);
-        setTimeout(()=>panel===1?cerca1():cerca2(), 300);
-      },
-      () => {} // ignore errors durante scansione
+    await scanner.start({facingMode:"environment"}, config,
+      (decoded)=>{ parseBarcodeIntoFields(decoded,panel); stopScanner(panel); setTimeout(()=>panel===1?cerca1():cerca2(),300); },
+      ()=>{}
     );
   } catch(e) {
-    // Fallback: usa qualsiasi fotocamera
     try {
-      await scanner.start(
-        { facingMode: "user" },
-        config,
-        (decodedText) => {
-          document.getElementById(inputId).value = decodedText;
-          stopScanner(panel);
-          setTimeout(()=>panel===1?cerca1():cerca2(), 300);
-        },
-        () => {}
+      await scanner.start({facingMode:"user"}, config,
+        (decoded)=>{ parseBarcodeIntoFields(decoded,panel); stopScanner(panel); setTimeout(()=>panel===1?cerca1():cerca2(),300); },
+        ()=>{}
       );
     } catch(e2) {
-      document.getElementById(hintId).style.color='var(--red)';
-      document.getElementById(hintId).textContent='Fotocamera non disponibile: '+e2;
+      const hint=document.getElementById(hintId);
+      hint.style.color='var(--red)'; hint.textContent='Fotocamera non disponibile: '+e2;
       document.getElementById(btnId).classList.remove('active');
       document.getElementById(wrId).style.display='none';
       scannerOpen=0;
     }
   }
 }
-
 function stopScanner(panel) {
-  const scanner = panel===1 ? scanner1 : scanner2;
-  if(scanner) {
-    try { scanner.stop().catch(()=>{}); } catch(e) {}
-    if(panel===1) scanner1=null; else scanner2=null;
-  }
-  const wrId = panel===1?'scannerWrap1':'scannerWrap2';
-  const hintId = panel===1?'hint1':'hint2';
-  const btnId = panel===1?'scanBtn1':'scanBtn2';
+  const sc=panel===1?scanner1:scanner2;
+  if(sc){ try{sc.stop().catch(()=>{});}catch(e){} if(panel===1)scanner1=null; else scanner2=null; }
+  const wrId=panel===1?'scannerWrap1':'scannerWrap2';
+  const hintId=panel===1?'hint1':'hint2';
+  const btnId=panel===1?'scanBtn1':'scanBtn2';
   document.getElementById(wrId).style.display='none';
-  document.getElementById(hintId).style.display='none';
-  document.getElementById(hintId).style.color='var(--accent)';
-  document.getElementById(hintId).textContent='Inquadra il barcode con la fotocamera — si chiude in automatico';
+  const h=document.getElementById(hintId);
+  h.style.display='none'; h.style.color='var(--accent)'; h.textContent='Inquadra il barcode — si chiude in automatico';
   document.getElementById(btnId).classList.remove('active');
   if(scannerOpen===panel) scannerOpen=0;
 }
 
 document.addEventListener('keydown', e=>{
   if(e.key!=='Enter') return;
-  if(document.getElementById('panel1').classList.contains('active') && !document.getElementById('btnCerca1').disabled) cerca1();
-  else if(document.getElementById('panel2').classList.contains('active') && !document.getElementById('btnCerca2').disabled) cerca2();
+  if(document.getElementById('panel1').classList.contains('active')&&!document.getElementById('btnCerca1').disabled) cerca1();
+  else if(document.getElementById('panel2').classList.contains('active')&&!document.getElementById('btnCerca2').disabled) cerca2();
 });
-
 loadDB();
 </script>
 </body>
