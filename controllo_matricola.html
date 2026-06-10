@@ -241,8 +241,7 @@ function flagsHtml(sost, rip, reg, pul) {
 
 function parseCSV(text) {
   if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
-  const lines=text.split(/?
-/);
+  const lines=text.split(/\r?\n/);
   const header=lines[0], sep=header.includes(';')?';':',';
   const cols=header.split(sep).map(c=>c.trim().replace(/^"|"$/g,'').toLowerCase());
   // Indici colonne
