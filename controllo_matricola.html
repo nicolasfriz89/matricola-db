@@ -278,13 +278,13 @@ function parseCSV(text) {
     if(!db[key]) db[key]={count:0, dates:[], interventi:[]};
     db[key].count++;
     if(dr) db[key].dates.push(dr);
-    if(hasInt) db[key].interventi.push({di, cc, sost, rip, reg, pul});
+    if(hasInt && !db[key].interventi.some(x=>x.di===di && x.cc===cc)) db[key].interventi.push({di, cc, sost, rip, reg, pul});
 
     // DB per seriale
     if(!dbS[ser]) dbS[ser]={};
     if(!dbS[ser][mod]) dbS[ser][mod]={dates:[], interventi:[]};
     if(dr) dbS[ser][mod].dates.push(dr);
-    if(hasInt) dbS[ser][mod].interventi.push({di, cc, sost, rip, reg, pul, mod});
+    if(hasInt && !dbS[ser][mod].interventi.some(x=>x.di===di && x.cc===cc)) dbS[ser][mod].interventi.push({di, cc, sost, rip, reg, pul, mod});
   }
   return [db, dbS];
 }
