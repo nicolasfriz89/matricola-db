@@ -284,7 +284,7 @@ function parseCSV(text) {
     if(!dbS[ser]) dbS[ser]={};
     if(!dbS[ser][mod]) dbS[ser][mod]={dates:[], interventi:[]};
     if(dr) dbS[ser][mod].dates.push(dr);
-    if(hasInt && !dbS[ser][mod].interventi.some(x=>x.di===di && x.cc===cc)) dbS[ser][mod].interventi.push({di, cc, sost, rip, reg, pul, mod});
+    if(hasInt) dbS[ser][mod].interventi.push({di, cc, sost, rip, reg, pul, mod});
   }
   return [db, dbS];
 }
@@ -358,7 +358,9 @@ function cerca2() {
     const pa=a.date.split('/'),pb=b.date.split('/');
     return new Date(pa[2],pa[1]-1,pa[0])-new Date(pb[2],pb[1]-1,pb[0]);
   });
-  intRows.sort((a,b)=>{
+  // Deduplica per data+componente (ignora modello)
+  const intRowsUniq = intRows.filter((x,i,arr)=>arr.findIndex(y=>y.di===x.di && y.cc===x.cc)===i);
+  intRowsUniq.sort((a,b)=>{
     const pa=a.di.split('/'),pb=b.di.split('/');
     return new Date(pa[2],pa[1]-1,pa[0])-new Date(pb[2],pb[1]-1,pb[0]);
   });
@@ -373,7 +375,7 @@ function cerca2() {
     document.getElementById('intTitle2').style.display='block';
     document.getElementById('intTable2').style.display='table';
     const tb2=document.getElementById('intTbody2');
-    intRows.forEach(x=>{
+    intRowsUniq.forEach(x=>{
       const tr=document.createElement('tr');
       tr.innerHTML='<td>'+x.di+'</td><td>'+x.mod+'</td><td style="font-size:.75rem;color:var(--muted)">'+( isVal(x.cc)?x.cc:'—' )+'</td><td>'+flagsHtml(x.sost,x.rip,x.reg,x.pul)+'</td>';
       tb2.appendChild(tr);
