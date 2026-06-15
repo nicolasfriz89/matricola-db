@@ -411,6 +411,21 @@ function cerca2() {
       tb2.appendChild(tr);
     });
   }
+  // Interventi dal DB_INT (sommati, 18 mesi)
+  const intData2 = DB_INT && DB_INT[ser] ? DB_INT[ser] : [];
+  if(intData2.length) {
+    document.getElementById('intTitle2').style.display='block';
+    document.getElementById('intTable2').style.display='table';
+    const tb2i=document.getElementById('intTbody2');
+    tb2i.innerHTML='';
+    intData2.forEach(x=>{
+      const tr=document.createElement('tr');
+      const flagStr=flagsFromStr(x[4]);
+      const countBadge=x[2]>1?' <span style="background:rgba(79,142,247,.2);color:var(--accent);border-radius:4px;padding:1px 6px;font-size:.7rem;font-weight:600;">x'+x[2]+'</span>':'';
+      tr.innerHTML='<td>'+x[3]+'</td><td colspan="2" style="font-size:.75rem;color:var(--muted)">'+x[0]+' — '+x[1]+countBadge+'</td><td>'+flagStr+'</td>';
+      tb2i.appendChild(tr);
+    });
+  }
   rb.style.display='block';
 }
 
