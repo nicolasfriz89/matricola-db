@@ -190,7 +190,8 @@
 
 <script>
 const CSV_URL = 'https://raw.githubusercontent.com/nicolasfriz89/matricola-db/main/programma.csv';
-let DB = null, DB_BY_SERIAL = null;
+const INT_URL = 'https://raw.githubusercontent.com/nicolasfriz89/matricola-db/main/interventi.json';
+let DB = null, DB_BY_SERIAL = null, DB_INT = null;
 let scanner1 = null, scanner2 = null;
 let scannerOpen = 0;
 
@@ -212,12 +213,14 @@ async function loadDB() {
   const pb=document.getElementById('progressBar'), pf=document.getElementById('progressFill');
   pb.style.display='block'; pf.style.width='15%';
   try {
-    const resp=await fetch(CSV_URL);
-    if(!resp.ok) throw new Error('HTTP '+resp.status);
-    pf.style.width='55%';
-    const text=await resp.text();
+    // Carica CSV e interventi in parallelo
+    const [respCSV, respINT] = await Promise.all([fetch(CSV_URL), fetch(INT_URL)]);
+    if(!respCSV.ok) throw new Error('CSV HTTP '+respCSV.status);
+    pf.style.width='50%';
+    const [text, intJson] = await Promise.all([respCSV.text(), respINT.text()]);
     pf.style.width='80%';
     [DB,DB_BY_SERIAL]=parseCSV(text);
+    DB_INT = respINT.ok ? JSON.parse(intJson) : {};
     pf.style.width='100%';
     setTimeout(()=>pb.style.display='none',500);
     setDBState('ok','✓ Database caricato — '+Object.keys(DB_BY_SERIAL).length.toLocaleString('it-IT')+' matricole');
@@ -230,6 +233,15 @@ async function loadDB() {
 
 function isVal(v) { return v && v !== '#N/D' && v !== 'ND' && v.trim() !== ''; }
 
+function flagsFromStr(str) {
+  if(!str) return '—';
+  let f='';
+  if(str.includes('S')) f+='<span class="flag-chip flag-sost">Sostituito</span>';
+  if(str.includes('R')) f+='<span class="flag-chip flag-rip">Riparato</span>';
+  if(str.includes('G')) f+='<span class="flag-chip flag-reg">Regolato</span>';
+  if(str.includes('P')) f+='<span class="flag-chip flag-pul">Pulito</span>';
+  return f ? '<div class="flags">'+f+'</div>' : '—';
+}
 function flagsHtml(sost, rip, reg, pul) {
   let f = '';
   if(isVal(sost) && sost.toUpperCase()==='S') f += '<span class="flag-chip flag-sost">Sostituito</span>';
@@ -322,10 +334,26 @@ function cerca1() {
     const dl=document.getElementById('datesList1');
     entry.dates.forEach(d=>{ const c=document.createElement('span'); c.className='chip'; c.textContent=d; dl.appendChild(c); });
   }
-  if(entry.interventi.length) {
+  // Interventi dal nuovo DB_INT (sommati)
+  const intData = DB_INT && DB_INT[ser] ? DB_INT[ser] : [];
+  if(intData.length) {
     document.getElementById('intTitle1').style.display='block';
     document.getElementById('intTable1').style.display='table';
     const tb=document.getElementById('intTbody1');
+    tb.innerHTML='';
+    intData.forEach(x=>{
+      // x = [cod, desc, count, ultima_data, flags]
+      const tr=document.createElement('tr');
+      const flagStr = flagsFromStr(x[4]);
+      const countBadge = x[2]>1 ? ' <span style="background:rgba(79,142,247,.2);color:var(--accent);border-radius:4px;padding:1px 6px;font-size:.7rem;font-weight:600;">x'+x[2]+'</span>' : '';
+      tr.innerHTML='<td>'+x[3]+'</td><td style="font-size:.75rem;color:var(--muted)">'+x[0]+' — '+x[1]+countBadge+'</td><td>'+flagStr+'</td>';
+      tb.appendChild(tr);
+    });
+  } else if(entry.interventi && entry.interventi.length) {
+    document.getElementById('intTitle1').style.display='block';
+    document.getElementById('intTable1').style.display='table';
+    const tb=document.getElementById('intTbody1');
+    tb.innerHTML='';
     entry.interventi.forEach(x=>{
       const tr=document.createElement('tr');
       tr.innerHTML='<td>'+x.di+'</td><td style="font-size:.75rem;color:var(--muted)">'+( isVal(x.cc)?x.cc:'—' )+'</td><td>'+flagsHtml(x.sost,x.rip,x.reg,x.pul)+'</td>';
