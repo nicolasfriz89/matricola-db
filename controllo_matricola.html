@@ -216,11 +216,13 @@ async function loadDB() {
     // Carica CSV e interventi in parallelo
     const [respCSV, respINT] = await Promise.all([fetch(CSV_URL), fetch(INT_URL)]);
     if(!respCSV.ok) throw new Error('CSV HTTP '+respCSV.status);
+    if(!respINT.ok) throw new Error('Interventi HTTP '+respINT.status);
     pf.style.width='50%';
     const [text, intJson] = await Promise.all([respCSV.text(), respINT.text()]);
     pf.style.width='80%';
     [DB,DB_BY_SERIAL]=parseCSV(text);
-    DB_INT = respINT.ok ? JSON.parse(intJson) : {};
+    try { DB_INT = JSON.parse(intJson); } catch(e) { DB_INT = {}; console.error('Errore parse interventi:', e); }
+    console.log('DB_INT caricato, matricole:', Object.keys(DB_INT).length);
     pf.style.width='100%';
     setTimeout(()=>pb.style.display='none',500);
     setDBState('ok','✓ Database caricato — '+Object.keys(DB_BY_SERIAL).length.toLocaleString('it-IT')+' matricole');
