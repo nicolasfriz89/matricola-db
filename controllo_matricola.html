@@ -107,6 +107,21 @@
   .not-found { margin-top: 24px; padding: 18px; border-radius: 12px; border: 1px dashed var(--border);
     text-align: center; color: var(--muted); font-size: .88rem; display: none; animation: fadeIn .3s ease; }
   .not-found span { display: block; font-size: 1.4rem; margin-bottom: 6px; }
+
+  /* INFO GRID (date installo, ritiro, incasso) */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0 18px; }
+  .info-box { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .info-box .info-label { font-size: .68rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .info-box .info-value { font-family: 'IBM Plex Mono', monospace; font-size: .92rem; color: var(--text); font-weight: 600; }
+  .info-box.full { grid-column: 1 / -1; }
+  .info-box.accent .info-value { color: var(--accent); }
+  .info-box.warn .info-value { color: var(--red); }
+
+  /* PULSANTE "+ ALTRI INTERVENTI" */
+  .btn-more { width: 100%; padding: 9px; background: var(--bg); border: 1px dashed var(--border);
+    border-radius: 8px; color: var(--muted); font-family: 'IBM Plex Sans', sans-serif; font-size: .8rem;
+    font-weight: 600; cursor: pointer; transition: border-color .15s, color .15s; }
+  .btn-more:hover { border-color: var(--accent); color: var(--accent); }
 </style>
 </head>
 <body>
@@ -149,6 +164,7 @@
       </div></div>
       <div class="result-status" id="resultStatus1"></div>
       <div class="result-detail" id="resultDetail1"></div>
+      <div class="info-grid" id="infoGrid1" style="display:none"></div>
       <div class="section-title" id="datesTitle1" style="display:none">Date di registrazione</div>
       <div id="datesList1" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
       <div class="section-title" id="intTitle1" style="display:none">Interventi tecnici</div>
@@ -156,6 +172,13 @@
         <thead><tr><th>Data Int.</th><th>Componente</th><th>Azioni</th></tr></thead>
         <tbody id="intTbody1"></tbody>
       </table>
+      <div id="moreIntWrap1" style="display:none;margin-top:8px;">
+        <button class="btn-more" id="moreIntBtn1" onclick="toggleMoreInt(1)">+ altri interventi</button>
+        <table class="results-table" id="intTableMore1" style="display:none;margin-top:8px;">
+          <thead><tr><th>Data Int.</th><th>Componente</th><th>Azioni</th></tr></thead>
+          <tbody id="intTbodyMore1"></tbody>
+        </table>
+      </div>
     </div>
     <div class="not-found" id="notFound1"><span>&#x26A0;&#xFE0F;</span>Nessun risultato trovato.</div>
   </div>
@@ -175,6 +198,9 @@
     <div class="result-box" id="resultBox2" style="padding:20px 16px;">
       <div class="result-status" id="resultStatus2"></div>
       <div class="result-detail" id="resultDetail2" style="margin-bottom:10px;"></div>
+
+      <div class="info-grid" id="infoGrid2" style="display:none"></div>
+
       <div class="section-title">Registrazioni</div>
       <table class="results-table"><thead><tr><th>Data Reg.</th><th>Modello</th></tr></thead>
         <tbody id="resultsTbody2"></tbody></table>
@@ -183,6 +209,13 @@
         <thead><tr><th>Data Int.</th><th>Modello</th><th>Componente</th><th>Azioni</th></tr></thead>
         <tbody id="intTbody2"></tbody>
       </table>
+      <div id="moreIntWrap2" style="display:none;margin-top:8px;">
+        <button class="btn-more" id="moreIntBtn2" onclick="toggleMoreInt(2)">+ altri interventi</button>
+        <table class="results-table" id="intTableMore2" style="display:none;margin-top:8px;">
+          <thead><tr><th>Data Int.</th><th>Modello</th><th>Componente</th><th>Azioni</th></tr></thead>
+          <tbody id="intTbodyMore2"></tbody>
+        </table>
+      </div>
     </div>
     <div class="not-found" id="notFound2"><span>&#x26A0;&#xFE0F;</span>Nessuna matricola trovata.</div>
   </div>
@@ -191,7 +224,8 @@
 <script>
 const CSV_URL = 'https://raw.githubusercontent.com/nicolasfriz89/matricola-db/main/programma.csv';
 const INT_URL = 'https://raw.githubusercontent.com/nicolasfriz89/matricola-db/main/interventi.json';
-let DB = null, DB_BY_SERIAL = null, DB_INT = null;
+const BAT_URL = 'https://raw.githubusercontent.com/nicolasfriz89/matricola-db/main/battute.json';
+let DB = null, DB_BY_SERIAL = null, DB_INT = null, DB_BATTUTE = null;
 let scanner1 = null, scanner2 = null;
 let scannerOpen = 0;
 
@@ -213,16 +247,21 @@ async function loadDB() {
   const pb=document.getElementById('progressBar'), pf=document.getElementById('progressFill');
   pb.style.display='block'; pf.style.width='15%';
   try {
-    // Carica CSV e interventi in parallelo
-    const [respCSV, respINT] = await Promise.all([fetch(CSV_URL), fetch(INT_URL)]);
+    // Carica CSV, interventi e battute in parallelo (battute è best-effort)
+    const [respCSV, respINT, respBAT] = await Promise.all([
+      fetch(CSV_URL), fetch(INT_URL), fetch(BAT_URL).catch(()=>null)
+    ]);
     if(!respCSV.ok) throw new Error('CSV HTTP '+respCSV.status);
     if(!respINT.ok) throw new Error('Interventi HTTP '+respINT.status);
     pf.style.width='50%';
-    const [text, intJson] = await Promise.all([respCSV.text(), respINT.text()]);
+    const text = await respCSV.text();
+    const intJson = await respINT.text();
+    const batJson = (respBAT && respBAT.ok) ? await respBAT.text() : null;
     pf.style.width='80%';
     [DB,DB_BY_SERIAL]=parseCSV(text);
     try { DB_INT = JSON.parse(intJson); } catch(e) { DB_INT = {}; console.error('Errore parse interventi:', e); }
-    console.log('DB_INT caricato, matricole:', Object.keys(DB_INT).length);
+    try { DB_BATTUTE = batJson ? JSON.parse(batJson) : {}; } catch(e) { DB_BATTUTE = {}; console.error('Errore parse battute:', e); }
+    console.log('DB_INT caricato, matricole:', Object.keys(DB_INT).length, '— DB_BATTUTE:', Object.keys(DB_BATTUTE).length);
     pf.style.width='100%';
     setTimeout(()=>pb.style.display='none',500);
     setDBState('ok','✓ Database caricato — '+Object.keys(DB_BY_SERIAL).length.toLocaleString('it-IT')+' matricole');
@@ -234,6 +273,70 @@ async function loadDB() {
 }
 
 function isVal(v) { return v && v !== '#N/D' && v !== 'ND' && v.trim() !== ''; }
+
+// ---- Parsing date formato Oracle "DD-MON-YY" -> Date JS ----
+const MESI_EN = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+function parseOracleDate(s) {
+  if(!s) return null;
+  const p = s.split('-');
+  if(p.length!==3) return null;
+  const day=parseInt(p[0],10);
+  const mon=MESI_EN[p[1].toUpperCase()];
+  let year=parseInt(p[2],10);
+  if(year<100) year += (year<70?2000:1900);
+  if(mon===undefined||isNaN(day)||isNaN(year)) return null;
+  return new Date(year,mon,day);
+}
+function oracleToItaliano(s) {
+  const d = parseOracleDate(s);
+  if(!d) return s||'—';
+  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+}
+
+// ---- Calcola incasso ultimi 12 mesi da oggi ----
+function incassoUltimoAnno(battute) {
+  if(!battute || !battute.length) return null;
+  const oggi = new Date();
+  const unAnnoFa = new Date(oggi.getFullYear()-1, oggi.getMonth(), oggi.getDate());
+  let tot = 0, n = 0;
+  battute.forEach(b=>{
+    const d = parseOracleDate(b.data);
+    if(d && d >= unAnnoFa && d <= oggi) { tot += b.inca; n++; }
+  });
+  return { tot, n };
+}
+
+// ---- Toggle "+ altri interventi" ----
+function toggleMoreInt(panel) {
+  const wrap = document.getElementById('intTableMore'+panel);
+  const btn = document.getElementById('moreIntBtn'+panel);
+  const open = wrap.style.display === 'table';
+  wrap.style.display = open ? 'none' : 'table';
+  btn.textContent = open ? ('+ altri interventi') : ('— nascondi altri interventi');
+}
+
+// ---- Costruisce box informativi (date installo/ritiro + incasso) ----
+function buildInfoGrid(matricola) {
+  const bat = DB_BATTUTE && DB_BATTUTE[matricola] ? DB_BATTUTE[matricola] : null;
+  if(!bat) return '';
+  let html = '';
+  if(isVal(bat.dpin)) {
+    html += '<div class="info-box"><div class="info-label">Prima Installazione</div><div class="info-value">'+oracleToItaliano(bat.dpin)+'</div></div>';
+  }
+  if(isVal(bat.ult_inst)) {
+    html += '<div class="info-box"><div class="info-label">Ultima Installazione</div><div class="info-value">'+oracleToItaliano(bat.ult_inst)+'</div></div>';
+  }
+  const inc = incassoUltimoAnno(bat.battute);
+  if(inc) {
+    html += '<div class="info-box accent full"><div class="info-label">Incasso Ultimo Anno ('+inc.n+' battut'+(inc.n===1?'a':'e')+')</div><div class="info-value">&euro; '+inc.tot.toFixed(2).replace('.',',')+'</div></div>';
+  }
+  return html;
+}
+function getDataRitiro(matricola) {
+  const bat = DB_BATTUTE && DB_BATTUTE[matricola] ? DB_BATTUTE[matricola] : null;
+  if(bat && isVal(bat.ritiro)) return oracleToItaliano(bat.ritiro);
+  return null;
+}
 
 function flagsFromStr(str) {
   if(!str) return '—';
@@ -331,36 +434,73 @@ function cerca1() {
   rb.classList.add(isRed?'red':'green'); rb.style.display='block';
   document.getElementById('resultStatus1').textContent=(isRed?'🔴  ATTENZIONE — ':'🟢  OK — ')+count+' registrazion'+(count===1?'e':'i');
   document.getElementById('resultDetail1').innerHTML='<strong>'+ser+'</strong> / <strong>'+mod+'</strong> — trovata <strong>'+count+' volt'+(count===1?'a':'e')+'</strong>.'+(isRed?' Soglia superata (≥ 4).':' Sotto la soglia (< 4).');
+
+  const infoHtml1 = buildInfoGrid(ser);
+  const ig1 = document.getElementById('infoGrid1');
+  if(infoHtml1) { ig1.innerHTML = infoHtml1; ig1.style.display='grid'; } else { ig1.style.display='none'; ig1.innerHTML=''; }
+
   if(entry.dates.length) {
     document.getElementById('datesTitle1').style.display='block';
     const dl=document.getElementById('datesList1');
-    entry.dates.forEach(d=>{ const c=document.createElement('span'); c.className='chip'; c.textContent=d; dl.appendChild(c); });
+    entry.dates.forEach((d,i)=>{
+      const c=document.createElement('span'); c.className='chip'; c.textContent=d;
+      dl.appendChild(c);
+    });
+    // Data ritiro a fianco dell'ultima revisione (ultima data registrata)
+    const ritiro1 = getDataRitiro(ser);
+    if(ritiro1) {
+      const c=document.createElement('span'); c.className='chip'; c.style.borderColor='var(--red)'; c.style.color='var(--red)';
+      c.textContent='Ritiro: '+ritiro1;
+      dl.appendChild(c);
+    }
   }
-  // Interventi dal nuovo DB_INT (sommati)
-  const intData = DB_INT && DB_INT[ser] ? DB_INT[ser] : [];
-  if(intData.length) {
+
+  // Interventi: separa principali (Sostituito/Riparato) da altri
+  const intDataRaw = DB_INT && DB_INT[ser] ? DB_INT[ser] : null;
+  const moreWrap1 = document.getElementById('moreIntWrap1');
+  const tbMore1 = document.getElementById('intTbodyMore1');
+  document.getElementById('intTableMore1').style.display='none';
+  document.getElementById('moreIntBtn1').textContent='+ altri interventi';
+  tbMore1.innerHTML=''; moreWrap1.style.display='none';
+
+  if(intDataRaw && intDataRaw.length) {
+    const principali = intDataRaw.filter(x=>x[4] && (x[4].includes('S')||x[4].includes('R')));
+    const altri = intDataRaw.filter(x=>!(x[4] && (x[4].includes('S')||x[4].includes('R'))));
     document.getElementById('intTitle1').style.display='block';
     document.getElementById('intTable1').style.display='table';
     const tb=document.getElementById('intTbody1');
     tb.innerHTML='';
-    intData.forEach(x=>{
-      // x = [cod, desc, count, ultima_data, flags]
-      const tr=document.createElement('tr');
+    const renderRow1 = (x) => {
       const flagStr = flagsFromStr(x[4]);
       const countBadge = x[2]>1 ? ' <span style="background:rgba(79,142,247,.2);color:var(--accent);border-radius:4px;padding:1px 6px;font-size:.7rem;font-weight:600;">x'+x[2]+'</span>' : '';
-      tr.innerHTML='<td>'+x[3]+'</td><td style="font-size:.75rem;color:var(--muted)">'+x[0]+' — '+x[1]+countBadge+'</td><td>'+flagStr+'</td>';
-      tb.appendChild(tr);
-    });
+      return '<td>'+x[3]+'</td><td style="font-size:.75rem;color:var(--muted)">'+x[0]+' — '+x[1]+countBadge+'</td><td>'+flagStr+'</td>';
+    };
+    if(principali.length) {
+      principali.forEach(x=>{ const tr=document.createElement('tr'); tr.innerHTML=renderRow1(x); tb.appendChild(tr); });
+    } else {
+      const tr=document.createElement('tr'); tr.innerHTML='<td colspan="3" style="color:var(--muted);text-align:center;font-size:.78rem">Nessuna sostituzione o riparazione registrata.</td>'; tb.appendChild(tr);
+    }
+    if(altri.length) {
+      moreWrap1.style.display='block';
+      altri.forEach(x=>{ const tr=document.createElement('tr'); tr.innerHTML=renderRow1(x); tbMore1.appendChild(tr); });
+    }
   } else if(entry.interventi && entry.interventi.length) {
     document.getElementById('intTitle1').style.display='block';
     document.getElementById('intTable1').style.display='table';
     const tb=document.getElementById('intTbody1');
     tb.innerHTML='';
-    entry.interventi.forEach(x=>{
-      const tr=document.createElement('tr');
-      tr.innerHTML='<td>'+x.di+'</td><td style="font-size:.75rem;color:var(--muted)">'+( isVal(x.cc)?x.cc:'—' )+'</td><td>'+flagsHtml(x.sost,x.rip,x.reg,x.pul)+'</td>';
-      tb.appendChild(tr);
-    });
+    const principali = entry.interventi.filter(x=>(isVal(x.sost)&&x.sost.toUpperCase()==='S')||(isVal(x.rip)&&x.rip.toUpperCase()==='S'));
+    const altri = entry.interventi.filter(x=>!((isVal(x.sost)&&x.sost.toUpperCase()==='S')||(isVal(x.rip)&&x.rip.toUpperCase()==='S')));
+    const renderOld1 = (x) => '<td>'+x.di+'</td><td style="font-size:.75rem;color:var(--muted)">'+( isVal(x.cc)?x.cc:'—' )+'</td><td>'+flagsHtml(x.sost,x.rip,x.reg,x.pul)+'</td>';
+    if(principali.length) {
+      principali.forEach(x=>{ const tr=document.createElement('tr'); tr.innerHTML=renderOld1(x); tb.appendChild(tr); });
+    } else {
+      const tr=document.createElement('tr'); tr.innerHTML='<td colspan="3" style="color:var(--muted);text-align:center;font-size:.78rem">Nessuna sostituzione o riparazione registrata.</td>'; tb.appendChild(tr);
+    }
+    if(altri.length) {
+      moreWrap1.style.display='block';
+      altri.forEach(x=>{ const tr=document.createElement('tr'); tr.innerHTML=renderOld1(x); tbMore1.appendChild(tr); });
+    }
   }
 }
 
@@ -374,6 +514,14 @@ function cerca2() {
   document.getElementById('intTitle2').style.display='none';
   document.getElementById('intTable2').style.display='none';
   document.getElementById('intTbody2').innerHTML='';
+  document.getElementById('ritiroHeader2').style.display='none';
+  const moreWrap2 = document.getElementById('moreIntWrap2');
+  const tbMore2 = document.getElementById('intTbodyMore2');
+  document.getElementById('intTableMore2').style.display='none';
+  document.getElementById('moreIntBtn2').textContent='+ altri interventi';
+  tbMore2.innerHTML=''; moreWrap2.style.display='none';
+  const ig2 = document.getElementById('infoGrid2');
+  ig2.innerHTML=''; ig2.style.display='none';
   if(!ser){alert('Inserisci la Matricola.');return;}
   const entry=DB_BY_SERIAL[ser];
   if(!entry||Object.keys(entry).length===0){nf.style.display='block';return;}
@@ -399,32 +547,65 @@ function cerca2() {
   document.getElementById('resultStatus2').style.color=isRed?'var(--red)':'var(--green)';
   document.getElementById('resultStatus2').textContent=(isRed?'🔴  ATTENZIONE — ':'🟢  OK — ')+totalCount+' registrazion'+(totalCount===1?'e':'i');
   document.getElementById('resultDetail2').innerHTML='Matricola <strong>'+ser+'</strong> — '+Object.keys(entry).length+' modell'+(Object.keys(entry).length===1?'o':'i')+'.';
+
+  // Box informativi: prima/ultima installazione + incasso ultimo anno
+  const infoHtml2 = buildInfoGrid(ser);
+  if(infoHtml2) { ig2.innerHTML = infoHtml2; ig2.style.display='grid'; }
+
+  // Tabella registrazioni, con colonna Data Ritiro sull'ultima riga
+  const ritiro2 = getDataRitiro(ser);
+  if(ritiro2) document.getElementById('ritiroHeader2').style.display='table-cell';
   const tb=document.getElementById('resultsTbody2');
-  rows.forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML='<td>'+r.date+'</td><td>'+r.mod+'</td>'; tb.appendChild(tr); });
-  if(intRows.length) {
-    document.getElementById('intTitle2').style.display='block';
-    document.getElementById('intTable2').style.display='table';
-    const tb2=document.getElementById('intTbody2');
-    intRowsUniq.forEach(x=>{
-      const tr=document.createElement('tr');
-      tr.innerHTML='<td>'+x.di+'</td><td>'+x.mod+'</td><td style="font-size:.75rem;color:var(--muted)">'+( isVal(x.cc)?x.cc:'—' )+'</td><td>'+flagsHtml(x.sost,x.rip,x.reg,x.pul)+'</td>';
-      tb2.appendChild(tr);
-    });
-  }
-  // Interventi dal DB_INT (sommati, 18 mesi)
-  const intData2 = DB_INT && DB_INT[ser] ? DB_INT[ser] : [];
-  if(intData2.length) {
+  rows.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    const isLast = i===rows.length-1;
+    let ritiroCell = '';
+    if(ritiro2) ritiroCell = '<td>'+(isLast?ritiro2:'')+'</td>';
+    tr.innerHTML='<td>'+r.date+'</td><td>'+r.mod+'</td>'+ritiroCell;
+    tb.appendChild(tr);
+  });
+
+  // ---- Interventi: priorità al DB_INT (18 mesi, sommati), altrimenti dal CSV storico ----
+  const intData2 = DB_INT && DB_INT[ser] ? DB_INT[ser] : null;
+
+  if(intData2 && intData2.length) {
+    const principali = intData2.filter(x=>x[4] && (x[4].includes('S')||x[4].includes('R')));
+    const altri = intData2.filter(x=>!(x[4] && (x[4].includes('S')||x[4].includes('R'))));
     document.getElementById('intTitle2').style.display='block';
     document.getElementById('intTable2').style.display='table';
     const tb2i=document.getElementById('intTbody2');
     tb2i.innerHTML='';
-    intData2.forEach(x=>{
-      const tr=document.createElement('tr');
+    const renderRow2 = (x) => {
       const flagStr=flagsFromStr(x[4]);
       const countBadge=x[2]>1?' <span style="background:rgba(79,142,247,.2);color:var(--accent);border-radius:4px;padding:1px 6px;font-size:.7rem;font-weight:600;">x'+x[2]+'</span>':'';
-      tr.innerHTML='<td>'+x[3]+'</td><td colspan="2" style="font-size:.75rem;color:var(--muted)">'+x[0]+' — '+x[1]+countBadge+'</td><td>'+flagStr+'</td>';
-      tb2i.appendChild(tr);
-    });
+      return '<td>'+x[3]+'</td><td colspan="2" style="font-size:.75rem;color:var(--muted)">'+x[0]+' — '+x[1]+countBadge+'</td><td>'+flagStr+'</td>';
+    };
+    if(principali.length) {
+      principali.forEach(x=>{ const tr=document.createElement('tr'); tr.innerHTML=renderRow2(x); tb2i.appendChild(tr); });
+    } else {
+      const tr=document.createElement('tr'); tr.innerHTML='<td colspan="4" style="color:var(--muted);text-align:center;font-size:.78rem">Nessuna sostituzione o riparazione registrata.</td>'; tb2i.appendChild(tr);
+    }
+    if(altri.length) {
+      moreWrap2.style.display='block';
+      altri.forEach(x=>{ const tr=document.createElement('tr'); tr.innerHTML=renderRow2(x); tbMore2.appendChild(tr); });
+    }
+  } else if(intRowsUniq.length) {
+    const principali = intRowsUniq.filter(x=>(isVal(x.sost)&&x.sost.toUpperCase()==='S')||(isVal(x.rip)&&x.rip.toUpperCase()==='S'));
+    const altri = intRowsUniq.filter(x=>!((isVal(x.sost)&&x.sost.toUpperCase()==='S')||(isVal(x.rip)&&x.rip.toUpperCase()==='S')));
+    document.getElementById('intTitle2').style.display='block';
+    document.getElementById('intTable2').style.display='table';
+    const tb2=document.getElementById('intTbody2');
+    tb2.innerHTML='';
+    const renderOld2 = (x) => '<td>'+x.di+'</td><td>'+x.mod+'</td><td style="font-size:.75rem;color:var(--muted)">'+( isVal(x.cc)?x.cc:'—' )+'</td><td>'+flagsHtml(x.sost,x.rip,x.reg,x.pul)+'</td>';
+    if(principali.length) {
+      principali.forEach(x=>{ const tr=document.createElement('tr'); tr.innerHTML=renderOld2(x); tb2.appendChild(tr); });
+    } else {
+      const tr=document.createElement('tr'); tr.innerHTML='<td colspan="4" style="color:var(--muted);text-align:center;font-size:.78rem">Nessuna sostituzione o riparazione registrata.</td>'; tb2.appendChild(tr);
+    }
+    if(altri.length) {
+      moreWrap2.style.display='block';
+      altri.forEach(x=>{ const tr=document.createElement('tr'); tr.innerHTML=renderOld2(x); tbMore2.appendChild(tr); });
+    }
   }
   rb.style.display='block';
 }
