@@ -328,7 +328,7 @@ function buildInfoGrid(matricola) {
   }
   const inc = incassoUltimoAnno(bat.battute);
   if(inc) {
-    html += '<div class="info-box accent full"><div class="info-label">Incasso Ultimo Anno ('+inc.n+' battut'+(inc.n===1?'a':'e')+')</div><div class="info-value">&euro; '+inc.tot.toFixed(2).replace('.',',')+'</div></div>';
+    html += '<div class="info-box accent full"><div class="info-label">Incasso Ultimo Anno ('+inc.n+' battut'+(inc.n===1?'a':'e')+')</div><div class="info-value">'+inc.tot.toFixed(2).replace('.',',')+'</div></div>';
   }
   return html;
 }
